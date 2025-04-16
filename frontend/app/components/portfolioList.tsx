@@ -13,15 +13,14 @@ type AggregatedHolding = {
 
 const LivePortfolio: React.FC = () => {
   const [holdings, setHoldings] = useState<AggregatedHolding[]>([]);
-  const [balance, setBalance] = useState(0);
+  const [cash, setCash] = useState(0);
 
   useEffect(() => {
     const fetchPortfolio = async () => {
       try {
         const res = await axios.get("http://localhost:5001/user/1");
-        setBalance(res.data.balance);
-
         const transactions = res.data.transactions;
+        setCash(res.data.cash);
 
         const grouped: Record<string, { totalQty: number; totalCost: number }> =
           {};
@@ -45,7 +44,6 @@ const LivePortfolio: React.FC = () => {
 
         setHoldings(aggregated);
 
-        // Subscribe to all symbols
         aggregated.forEach(({ symbol }) => {
           socket.emit("subscribe", symbol);
         });
@@ -76,6 +74,12 @@ const LivePortfolio: React.FC = () => {
     };
   }, []);
 
+  const portfolioValue = holdings.reduce((acc, h) => {
+    return h.currentPrice != null ? acc + h.currentPrice * h.quantity : acc;
+  }, 0);
+
+  const totalBalance = cash + portfolioValue;
+
   return (
     <div className="p-4 space-y-4">
       <div className="border-b pb-2">
@@ -83,7 +87,7 @@ const LivePortfolio: React.FC = () => {
           Total Balance
         </p>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          ${balance.toFixed(2)}
+          ${totalBalance.toFixed(2)}
         </h1>
       </div>
 
@@ -104,7 +108,7 @@ const LivePortfolio: React.FC = () => {
         return (
           <div
             key={h.symbol}
-            className="flex justify-between items-center p-3 border rounded"
+            className="flex justify-between items-center p-3 border rounded  hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
           >
             <div>
               <h2 className="text-xl font-semibold">{h.symbol}</h2>

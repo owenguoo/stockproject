@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import Layout from "@/components/kokonutui/layout";
+import Layout from "@/app/components/layout";
 import { Button } from "@/components/ui/button";
 import Search from "../components/search";
 import { Wallet } from "lucide-react";
@@ -12,6 +12,7 @@ import List03 from "@/components/kokonutui/list-03";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import PortfolioList from "../components/portfolioList";
+import TradePanel from "../components/tradePanel";
 
 const Portfolio = () => {
   const [balance, setBalance] = useState("");
@@ -33,22 +34,7 @@ const Portfolio = () => {
                 <CreditCard className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-50" />
                 Make Transaction
               </h2>
-              <div className="w-full max-w-xl mx-auto bg-white dark:bg-zinc-900/70 border border-zinc-100 dark:border-zinc-800 rounded-xl shadow-sm backdrop-blur-xl">
-                <div className="flex-1">
-                  <div className="p-4 border-b border-zinc-100 dark:border-zinc-800">
-                    <p className="text-m font-medium text-zinc-600 dark:text-zinc-400">
-                      Search Ticker
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-2">
-                    <Button className="text-xs font-medium">Buy</Button>
-                    <Button className="text-xs font-medium">Sell</Button>
-                  </div>
-                  <h2>Quantity</h2>
-                  <Input />
-                </div>
-              </div>
+              <TradePanel />
             </div>
           </div>
         </div>

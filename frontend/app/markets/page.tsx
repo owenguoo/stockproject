@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import Layout from "@/components/kokonutui/layout";
+import Layout from "@/app/components/layout";
 import TradingViewWidget from "../components/tradingViewWidget";
 
 const Markets = () => {

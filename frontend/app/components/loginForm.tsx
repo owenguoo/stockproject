@@ -28,7 +28,7 @@ export function LoginForm({
 
       if (res.status === 201) {
         console.log("SDFDS");
-        router.push("/dashboard");
+        router.push("/portfolio");
         router.refresh();
       }
     } catch (e) {
