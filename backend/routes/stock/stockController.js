@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import finnhub from 'finnhub';
-import verifyToken from '../../jwt.js';
 
 export const prisma = new PrismaClient();
 
@@ -41,7 +40,6 @@ async function buyStock(req, res) {
                 where: { id: userId },
                 data: {
                     cash: { decrement: cost }
-                    // Removed balance update since 'balance' column no longer exists
                 },
             }),
         ]);
@@ -69,7 +67,6 @@ async function sellStock(req, res) {
             return res.status(400).json({ error: "Not enough shares to sell" });
         }
         const sellValue = amount * price;
-        // For sell, create a new transaction with negative amount and negative total
         await prisma.$transaction([
             prisma.transaction.create({
                 data: { stockSymbol, amount: -amount, total: -sellValue, userId },
@@ -78,7 +75,6 @@ async function sellStock(req, res) {
                 where: { id: userId },
                 data: {
                     cash: { increment: sellValue }
-                    // Removed balance update since 'balance' column no longer exists
                 },
             }),
         ]);
@@ -98,7 +94,6 @@ async function getPortfolio(req, res) {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-        // Calculate balance as cash + sum of all transaction totals
         const totalStockValue = user.transactions.reduce((sum, tx) => sum + tx.total, 0);
         const balance = user.cash + totalStockValue;
         res.json({

@@ -22,18 +22,15 @@ const LivePortfolio: React.FC = () => {
   const subscribeToSymbols = (symbols: string[]) => {
     if (!finnhubSocket) return;
 
-    // Wait until socket is open before sending messages
     if (finnhubSocket.readyState !== 1) {
       finnhubSocket.addEventListener(
         "open",
         () => {
           console.log("Finnhub WebSocket OPENED");
-          // Unsubscribe from all previous
           subscribedSymbols.forEach((symbol) => {
             console.log("Unsubscribing from", symbol);
             finnhubSocket.send(JSON.stringify({ type: "unsubscribe", symbol }));
           });
-          // Subscribe to new
           symbols.forEach((symbol) => {
             console.log("Subscribing to", symbol);
             finnhubSocket.send(JSON.stringify({ type: "subscribe", symbol }));
@@ -45,7 +42,6 @@ const LivePortfolio: React.FC = () => {
       return;
     }
 
-    // If already open, send immediately
     subscribedSymbols.forEach((symbol) => {
       console.log("Unsubscribing from", symbol);
       finnhubSocket.send(JSON.stringify({ type: "unsubscribe", symbol }));
@@ -101,14 +97,12 @@ const LivePortfolio: React.FC = () => {
             currentPrice: null,
           }));
         setHoldings(aggregated);
-        // Subscribe to current holdings
         subscribeToSymbols(aggregated.map((h) => h.symbol));
       } catch (err) {
         console.error("Error fetching portfolio:", err);
       }
     };
     fetchPortfolio();
-    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {

@@ -2,7 +2,6 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function getUserPortfolio(req, res) {
-  // Use userId from JWT
   const userId = req.user?.userId;
 
   if (!userId) {

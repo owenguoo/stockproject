@@ -4,7 +4,6 @@ function TradingViewWidget() {
   const container = useRef();
 
   useEffect(() => {
-    // Check if the script is already in the document
     const existingScript = document.querySelector('script[src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"]');
     
     if (!existingScript) {

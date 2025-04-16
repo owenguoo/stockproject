@@ -24,7 +24,6 @@ const Search = () => {
       console.log("error");
     }
   };
-  // need to open websocket on call rather than .get
   return (
     <>
       <Input />
