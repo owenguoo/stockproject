@@ -1,5 +1,7 @@
-function getInfo(req, res) {
-    const balance =    
-}
+const express = require("express");
+const router = express.Router();
+const { getUserPortfolio } = require("./userController");
 
-module.exports = { getInfo };
+router.get("/:id", getUserPortfolio);
+
+module.exports = router;

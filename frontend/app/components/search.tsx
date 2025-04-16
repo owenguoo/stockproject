@@ -3,11 +3,13 @@ import React from "react";
 import { useState } from "react";
 import axios from "axios";
 import TradingViewWidget from "./tradingViewWidget";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const Search = () => {
-  const [ticker, setTicker] = useState("S&P 500 Index");
-  const [search, setSearch] = useState("s");
-  const [price, setPrice] = useState("d");
+  const [ticker, setTicker] = useState("");
+  const [search, setSearch] = useState("");
+  const [price, setPrice] = useState("");
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -25,13 +27,8 @@ const Search = () => {
   // need to open websocket on call rather than .get
   return (
     <>
-      <input
-        type="text"
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search Ticker"
-      />
-
-      <button onClick={handleSubmit}>Search</button>
+      <Input />
+      <Button onClick={handleSubmit}>Search</Button>
       <h1>{ticker}</h1>
       <h1>{price}</h1>
     </>

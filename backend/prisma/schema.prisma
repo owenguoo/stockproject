@@ -26,8 +26,6 @@ model Transaction {
   stockSymbol String
   amount      Int
   price       Float
-  type        String  // 'buy' or 'sell'
-  createdAt   DateTime @default(now())
   userId      Int
   user        User    @relation(fields: [userId], references: [id])
 }
