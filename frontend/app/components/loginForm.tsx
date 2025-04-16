@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { setToken } from "../utils/auth";
+import api from "../utils/axiosConfig";
 
 export function LoginForm({
   className,
@@ -21,13 +22,13 @@ export function LoginForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5001/auth/login", {
+      const res = await api.post("/auth/login", {
         username,
         password,
       });
 
-      if (res.status === 201) {
-        console.log("SDFDS");
+      if (res.status === 201 && res.data.token) {
+        setToken(res.data.token);
         router.push("/portfolio");
         router.refresh();
       }
@@ -45,7 +46,6 @@ export function LoginForm({
               <div className="flex flex-col items-center text-center">
                 <h1 className="text-2xl font-bold">Welcome back</h1>
                 <p className="text-balance text-muted-foreground">
-                  Login to your Acme Inc account
                 </p>
               </div>
               <div className="grid gap-2">
@@ -87,13 +87,7 @@ export function LoginForm({
               </div>
             </div>
           </form>
-          <div className="relative hidden bg-muted md:block">
-            <img
-              src="/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
-          </div>
+          <div className="bg-gray-700 md:block"></div>
         </CardContent>
       </Card>
       <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">

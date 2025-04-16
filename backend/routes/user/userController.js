@@ -1,8 +1,13 @@
-const { PrismaClient } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function getUserPortfolio(req, res) {
-  const userId = parseInt(req.params.id);
+  // Use userId from JWT
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
   try {
     const user = await prisma.user.findUnique({
@@ -17,6 +22,7 @@ async function getUserPortfolio(req, res) {
     res.json({
       id: user.id,
       username: user.username,
+      cash: user.cash,
       balance: user.balance,
       transactions: user.transactions,
     });
@@ -26,4 +32,4 @@ async function getUserPortfolio(req, res) {
   }
 }
 
-module.exports = { getUserPortfolio };
+export { getUserPortfolio };

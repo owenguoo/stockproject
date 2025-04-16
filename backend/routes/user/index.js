@@ -1,7 +1,9 @@
-const express = require("express");
+import express from "express";
+import { getUserPortfolio } from "./userController.js";
+import verifyToken from '../../jwt.js';
+
 const router = express.Router();
-const { getUserPortfolio } = require("./userController");
 
-router.get("/:id", getUserPortfolio);
+router.get("/portfolio", verifyToken, getUserPortfolio);
 
-module.exports = router;
+export default router;

@@ -14,7 +14,7 @@ const Search = () => {
     e.preventDefault();
     try {
       const res = await axios.get(
-        `http://localhost:5001/stock/quote/:${ticker}`,
+        `http://localhost:5001/stock/quote/${ticker}`,
         {}
       );
       setPrice(res.data.c);

@@ -1,11 +1,10 @@
 import Link from "next/link";
-// import Login from "./login/page";
-// import Register from "./register/page";
+import Login from "./login/page";
 
 export default function Home() {
   return (
     <>
-      {/* <Login /> */}
+      <Login />
     </>
   );
 }

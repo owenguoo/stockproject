@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { io } from "socket.io-client";
+import api from "../utils/axiosConfig";
 
-const socket = io("http://localhost:5001");
+const FINNHUB_TOKEN = process.env.NEXT_PUBLIC_FINNHUB_TOKEN;
+const finnhubSocket =
+  typeof window !== "undefined"
+    ? new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_TOKEN}`)
+    : null;
 
 type AggregatedHolding = {
   symbol: string;
@@ -14,71 +17,123 @@ type AggregatedHolding = {
 const LivePortfolio: React.FC = () => {
   const [holdings, setHoldings] = useState<AggregatedHolding[]>([]);
   const [cash, setCash] = useState(0);
+  const [subscribedSymbols, setSubscribedSymbols] = useState<string[]>([]);
+
+  const subscribeToSymbols = (symbols: string[]) => {
+    if (!finnhubSocket) return;
+
+    // Wait until socket is open before sending messages
+    if (finnhubSocket.readyState !== 1) {
+      finnhubSocket.addEventListener(
+        "open",
+        () => {
+          console.log("Finnhub WebSocket OPENED");
+          // Unsubscribe from all previous
+          subscribedSymbols.forEach((symbol) => {
+            console.log("Unsubscribing from", symbol);
+            finnhubSocket.send(JSON.stringify({ type: "unsubscribe", symbol }));
+          });
+          // Subscribe to new
+          symbols.forEach((symbol) => {
+            console.log("Subscribing to", symbol);
+            finnhubSocket.send(JSON.stringify({ type: "subscribe", symbol }));
+          });
+          setSubscribedSymbols(symbols);
+        },
+        { once: true }
+      );
+      return;
+    }
+
+    // If already open, send immediately
+    subscribedSymbols.forEach((symbol) => {
+      console.log("Unsubscribing from", symbol);
+      finnhubSocket.send(JSON.stringify({ type: "unsubscribe", symbol }));
+    });
+    symbols.forEach((symbol) => {
+      console.log("Subscribing to", symbol);
+      finnhubSocket.send(JSON.stringify({ type: "subscribe", symbol }));
+    });
+    setSubscribedSymbols(symbols);
+  };
 
   useEffect(() => {
     const fetchPortfolio = async () => {
       try {
-        const res = await axios.get("http://localhost:5001/user/1");
+        const res = await api.get("/user/portfolio");
         const transactions = res.data.transactions;
-        setCash(res.data.cash);
-
+        setCash(Number(res.data.cash) || 0);
         const grouped: Record<string, { totalQty: number; totalCost: number }> =
           {};
-
-        transactions.forEach(({ stockSymbol, amount, price }) => {
-          if (!grouped[stockSymbol]) {
-            grouped[stockSymbol] = { totalQty: 0, totalCost: 0 };
+        transactions.forEach(
+          ({
+            stockSymbol,
+            amount,
+            total,
+          }: {
+            stockSymbol: string;
+            amount: number;
+            total: number;
+          }) => {
+            if (!grouped[stockSymbol]) {
+              grouped[stockSymbol] = { totalQty: 0, totalCost: 0 };
+            }
+            if (amount > 0) {
+              grouped[stockSymbol].totalQty += amount;
+              grouped[stockSymbol].totalCost += total;
+            } else if (amount < 0) {
+              const holding = grouped[stockSymbol];
+              const qtyToRemove = Math.abs(amount);
+              if (holding.totalQty > 0) {
+                const costPerShare = holding.totalCost / holding.totalQty;
+                holding.totalCost -= costPerShare * qtyToRemove;
+                holding.totalQty += amount;
+              }
+            }
           }
-          grouped[stockSymbol].totalQty += amount;
-          grouped[stockSymbol].totalCost += amount * price;
-        });
-
-        const aggregated: AggregatedHolding[] = Object.entries(grouped).map(
-          ([symbol, { totalQty, totalCost }]) => ({
+        );
+        const aggregated: AggregatedHolding[] = Object.entries(grouped)
+          .filter(([_, { totalQty }]) => totalQty !== 0)
+          .map(([symbol, { totalQty, totalCost }]) => ({
             symbol,
             quantity: totalQty,
-            avgPurchasePrice: totalCost / totalQty,
+            avgPurchasePrice: totalQty !== 0 ? totalCost / totalQty : 0,
             currentPrice: null,
-          })
-        );
-
+          }));
         setHoldings(aggregated);
-
-        aggregated.forEach(({ symbol }) => {
-          socket.emit("subscribe", symbol);
-        });
+        // Subscribe to current holdings
+        subscribeToSymbols(aggregated.map((h) => h.symbol));
       } catch (err) {
         console.error("Error fetching portfolio:", err);
       }
     };
-
     fetchPortfolio();
-
-    return () => {
-      socket.emit("unsubscribe_all");
-    };
+    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
-    socket.on("stock_update", (data) => {
-      setHoldings((prev) =>
-        prev.map((h) => {
-          const match = data.data.find((d: any) => d.s === h.symbol);
-          return match ? { ...h, currentPrice: match.p } : h;
-        })
-      );
-    });
-
+    if (!finnhubSocket) return;
+    const handleMessage = (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "trade" && data.data) {
+        setHoldings((prev) =>
+          prev.map((h) => {
+            const trade = data.data.find((d: any) => d.s === h.symbol);
+            return trade ? { ...h, currentPrice: trade.p } : h;
+          })
+        );
+      }
+    };
+    finnhubSocket.addEventListener("message", handleMessage);
     return () => {
-      socket.off("stock_update");
+      finnhubSocket.removeEventListener("message", handleMessage);
     };
   }, []);
 
   const portfolioValue = holdings.reduce((acc, h) => {
     return h.currentPrice != null ? acc + h.currentPrice * h.quantity : acc;
   }, 0);
-
-  const totalBalance = cash + portfolioValue;
+  const totalBalance = (Number(cash) || 0) + (Number(portfolioValue) || 0);
 
   return (
     <div className="p-4 space-y-4">
@@ -87,52 +142,48 @@ const LivePortfolio: React.FC = () => {
           Total Balance
         </p>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          ${totalBalance.toFixed(2)}
+          ${isNaN(totalBalance) ? "0.00" : totalBalance.toFixed(2)}
         </h1>
       </div>
-
-      {holdings.map((h) => {
-        const totalValue = h.currentPrice ? h.quantity * h.currentPrice : 0;
-        const percentChange =
-          h.currentPrice != null
-            ? ((h.currentPrice - h.avgPurchasePrice) / h.avgPurchasePrice) * 100
-            : null;
-
-        const changeColor =
-          percentChange === null
-            ? "text-zinc-400"
-            : percentChange >= 0
-            ? "text-green-500"
-            : "text-red-500";
-
-        return (
-          <div
-            key={h.symbol}
-            className="flex justify-between items-center p-3 border rounded  hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
-          >
-            <div>
-              <h2 className="text-xl font-semibold">{h.symbol}</h2>
-              <p className="text-sm text-zinc-600">
-                Qty: {h.quantity} @ ${h.avgPurchasePrice.toFixed(2)}
-              </p>
+      <div className="max-h-96 overflow-y-auto space-y-2">
+        {holdings.map((h) => {
+          const costBasis = h.quantity * h.avgPurchasePrice;
+          const marketValue = h.quantity * (h.currentPrice ?? 0);
+          const percentChange =
+            costBasis > 0
+              ? ((marketValue - costBasis) / costBasis) * 100
+              : null;
+          const changeColor =
+            percentChange === null
+              ? "text-zinc-400"
+              : percentChange >= 0
+              ? "text-green-500"
+              : "text-red-500";
+          return (
+            <div
+              key={h.symbol}
+              className="flex justify-between items-center p-3 border rounded  hover:bg-zinc-100 dark:hover:bg-zinc-800/50"
+            >
+              <div>
+                <h2 className="text-xl font-semibold">{h.symbol}</h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  {h.quantity} shares
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold">
+                  {h.currentPrice != null
+                    ? `$${h.currentPrice.toFixed(2)}`
+                    : "Loading..."}
+                </p>
+                <p className={`text-xs font-medium ${changeColor}`}>
+                  {percentChange != null ? `${percentChange.toFixed(2)}%` : ""}
+                </p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm">
-                Current:{" "}
-                {h.currentPrice != null
-                  ? `$${h.currentPrice.toFixed(2)}`
-                  : "Loading..."}
-              </p>
-              <p className={`text-sm font-medium ${changeColor}`}>
-                {percentChange != null ? `${percentChange.toFixed(2)}%` : ""}
-              </p>
-              <p className="text-xs text-zinc-600">
-                Total: ${totalValue.toFixed(2)}
-              </p>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 };

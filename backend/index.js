@@ -1,15 +1,15 @@
-const WebSocket = require('ws'); // native WS for Finnhub
-const express = require('express');
-const socketIO = require('socket.io');
-const http = require('http');
-const cors = require('cors');
+import WebSocket from 'ws'; // native WS for Finnhub
+import express from 'express';
+import { Server as socketIO } from 'socket.io';
+import http from 'http';
+import cors from 'cors';
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server, {
+const io = new socketIO(server, {
   cors: {
     origin: "http://localhost:3000", 
     methods: ["GET", "POST"],
@@ -20,13 +20,12 @@ const io = socketIO(server, {
 app.use(cors());
 app.use(express.json());
 
-const authRoutes = require('./routes/auth');
-const stockRoutes = require('./routes/stock');
-const userRoutes = require('./routes/user');
+import authRoutes from './routes/auth/index.js';
+import stockRoutes from './routes/stock/index.js';
+import userRoutes from './routes/user/index.js';
 app.use('/auth', authRoutes);
 app.use('/stock', stockRoutes);
 app.use('/user', userRoutes);
-
 
 const FINNHUB_KEY = process.env.FINAPI;
 const finnhubSocket = new WebSocket(`wss://ws.finnhub.io?token=${FINNHUB_KEY}`);
@@ -45,7 +44,6 @@ finnhubSocket.on('message', (data) => {
 finnhubSocket.on('error', (err) => {
   console.error("Finnhub error:", err);
 });
-
 
 io.on('connection', (socket) => {
   console.log(`Connected: ${socket.id}`);

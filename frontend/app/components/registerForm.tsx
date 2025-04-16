@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "../utils/axiosConfig";
 
 export function RegisterForm({
   className,
@@ -21,7 +21,7 @@ export function RegisterForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:5001/auth/register", {
+      const res = await api.post("/auth/register", {
         username,
         password,
       });
@@ -86,13 +86,7 @@ export function RegisterForm({
               </div>
             </div>
           </form>
-          <div className="relative hidden bg-muted md:block">
-            <img
-              src="/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
-          </div>
+          <div className="bg-gray-700 md:block"></div>
         </CardContent>
       </Card>
       <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
